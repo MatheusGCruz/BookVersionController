@@ -145,6 +145,16 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+  const interval = setInterval(() => {
+    if (mainFile) {
+      saveToDrive();
+    }
+  }, 30000);
+
+  return () => clearInterval(interval);
+}, [mainFile, bookText, comments, versionLabel]);
+
   async function connectDrive() {
     try {
       setDriveStatus("Choose your Google Drive account...");
@@ -171,6 +181,7 @@ function App() {
       setMainFile(file);
       setBookName(derivedName);
       setBookText(text);
+      syncEditorContent(text);
 
       const versions = await ensureVersionsFile(file);
       setVersionsFile(versions);
@@ -309,6 +320,7 @@ function App() {
     const newText = nextLines.join("\n");
 
     setBookText(newText);
+    syncEditorContent(newText);
 
     if (editorRef.current) {
       editorRef.current.innerText = newText;
@@ -331,6 +343,12 @@ function App() {
   function submitSearch(event) {
     event.preventDefault();
     setSourceUrl(`https://www.google.com/search?igu=1&q=${encodeURIComponent(searchQuery)}`);
+  }
+
+  function syncEditorContent(text) {
+    if (editorRef.current) {
+      editorRef.current.innerText = text;
+    }
   }
 
   return (
