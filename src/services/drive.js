@@ -1,22 +1,19 @@
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const SCOPES = "https://www.googleapis.com/auth/drive";
 const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest";
 
 let tokenClient;
-let pickerLoaded = false;
 
 export async function loadDriveApis() {
-  if (!CLIENT_ID || !API_KEY) {
-    throw new Error("Add VITE_GOOGLE_CLIENT_ID and VITE_GOOGLE_API_KEY to .env.local");
+  if (!CLIENT_ID) {
+    throw new Error("Add VITE_GOOGLE_CLIENT_ID to .env.local");
   }
 
   await loadScript("https://apis.google.com/js/api.js");
   await loadScript("https://accounts.google.com/gsi/client");
 
-  await new Promise((resolve) => window.gapi.load("client:picker", resolve));
-  await window.gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] });
-  pickerLoaded = true;
+  await new Promise((resolve) => window.gapi.load("client", resolve));
+  await window.gapi.client.init({ discoveryDocs: [DISCOVERY_DOC] });
 
   tokenClient =
     tokenClient ||
@@ -54,46 +51,23 @@ export async function getDriveUser() {
   return response.result.user;
 }
 
-export function openDrivePicker({ title }) {
-  return new Promise((resolve, reject) => {
-    if (!pickerLoaded) {
-      reject(new Error("Picker is not loaded"));
-      return;
-    }
+export async function listDriveTextFiles(searchTerm = "") {
+  const queryParts = ["mimeType = 'text/plain'", "trashed = false"];
+  if (searchTerm.trim()) {
+    queryParts.push(`name contains '${escapeDriveQuery(searchTerm.trim())}'`);
+  }
 
-    const token = window.gapi.client.getToken()?.access_token;
-    if (!token) {
-      reject(new Error("Connect to Google Drive first"));
-      return;
-    }
-
-    const view = new window.google.picker.DocsView(window.google.picker.ViewId.DOCS)
-      .setMimeTypes("text/plain")
-      .setIncludeFolders(false)
-      .setOwnedByMe(false)
-      .setSelectFolderEnabled(false);
-
-    const picker = new window.google.picker.PickerBuilder()
-      .setTitle(title)
-      .setDeveloperKey(API_KEY)
-      .setOAuthToken(token)
-      .addView(view)
-      .enableFeature(window.google.picker.Feature.SUPPORT_DRIVES)
-      .setCallback((data) => {
-        if (data.action === window.google.picker.Action.PICKED) {
-          const picked = data.docs[0];
-          resolve({
-            id: picked.id,
-            name: picked.name,
-            mimeType: picked.mimeType,
-            parents: picked.parents,
-          });
-        }
-      })
-      .build();
-
-    picker.setVisible(true);
+  const response = await window.gapi.client.drive.files.list({
+    q: queryParts.join(" and "),
+    fields: "files(id,name,mimeType,parents,modifiedTime,owners(displayName,emailAddress),capabilities)",
+    spaces: "drive",
+    includeItemsFromAllDrives: true,
+    supportsAllDrives: true,
+    orderBy: "modifiedTime desc",
+    pageSize: 50,
   });
+
+  return response.result.files || [];
 }
 
 export async function readDriveTextFile(fileId) {
@@ -106,7 +80,7 @@ export async function readDriveTextFile(fileId) {
 
 export async function saveDriveTextFile(fileId, content) {
   const token = window.gapi.client.getToken()?.access_token;
-  const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+  const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media&supportsAllDrives=true`, {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -172,4 +146,8 @@ function loadScript(src) {
     script.onerror = () => reject(new Error(`Could not load ${src}`));
     document.head.appendChild(script);
   });
+}
+
+function escapeDriveQuery(value) {
+  return value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
 }

@@ -15,12 +15,13 @@ import {
   Search,
   Settings,
   Underline,
+  X,
 } from "lucide-react";
 import {
   ensureVersionsFile,
   getDriveUser,
+  listDriveTextFiles,
   loadDriveApis,
-  openDrivePicker,
   readDriveTextFile,
   saveDriveTextFile,
   signInToDrive,
@@ -106,7 +107,15 @@ function App() {
   const [mainFile, setMainFile] = useState(null);
   const [versionsFile, setVersionsFile] = useState(null);
   const [versionsRaw, setVersionsRaw] = useState("");
+  const [fileDialog, setFileDialog] = useState({
+    open: false,
+    title: "",
+    query: "",
+    files: [],
+    loading: false,
+  });
   const editorRef = useRef(null);
+  const fileDialogResolver = useRef(null);
 
   const lines = useMemo(() => bookText.split("\n"), [bookText]);
   const lineComments = useMemo(
@@ -150,7 +159,7 @@ function App() {
       await signInToDrive();
       const user = await getDriveUser();
       setDriveUser(user.emailAddress || user.displayName || "");
-      const file = await openDrivePicker({ title: "Choose the principal .txt book file" });
+      const file = await chooseDriveTextFile("Choose the principal .txt book file");
       const text = await readDriveTextFile(file.id);
       const derivedName = file.name.replace(/\.txt$/i, "");
       setMainFile(file);
@@ -179,7 +188,7 @@ function App() {
       await signInToDrive();
       const user = await getDriveUser();
       setDriveUser(user.emailAddress || user.displayName || "");
-      const file = await openDrivePicker({ title: "Choose the versions/commentary .txt file" });
+      const file = await chooseDriveTextFile("Choose the versions/commentary .txt file");
       const text = await readDriveTextFile(file.id);
       const parsed = parseVersionsFile(text);
       setVersionsFile(file);
@@ -190,6 +199,38 @@ function App() {
     } catch (error) {
       setDriveStatus(error.message);
     }
+  }
+
+  async function chooseDriveTextFile(title) {
+    const files = await listDriveTextFiles();
+    setFileDialog({ open: true, title, query: "", files, loading: false });
+
+    return new Promise((resolve, reject) => {
+      fileDialogResolver.current = { resolve, reject };
+    });
+  }
+
+  async function refreshDriveFiles(query) {
+    setFileDialog((dialog) => ({ ...dialog, query, loading: true }));
+    try {
+      const files = await listDriveTextFiles(query);
+      setFileDialog((dialog) => ({ ...dialog, files, loading: false }));
+    } catch (error) {
+      setFileDialog((dialog) => ({ ...dialog, files: [], loading: false }));
+      setDriveStatus(error.message);
+    }
+  }
+
+  function selectDriveFile(file) {
+    fileDialogResolver.current?.resolve(file);
+    fileDialogResolver.current = null;
+    setFileDialog((dialog) => ({ ...dialog, open: false }));
+  }
+
+  function closeDriveFileDialog() {
+    fileDialogResolver.current?.reject(new Error("File selection canceled"));
+    fileDialogResolver.current = null;
+    setFileDialog((dialog) => ({ ...dialog, open: false }));
   }
 
   async function saveToDrive() {
@@ -478,6 +519,43 @@ function App() {
         </form>
         <iframe title="Research webpage" src={sourceUrl} sandbox="allow-scripts allow-forms allow-same-origin allow-popups" />
       </aside>
+
+      {fileDialog.open && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="file-dialog" role="dialog" aria-modal="true" aria-label={fileDialog.title}>
+            <header className="file-dialog-header">
+              <strong>{fileDialog.title}</strong>
+              <button className="icon-button" onClick={closeDriveFileDialog} title="Close">
+                <X size={17} />
+              </button>
+            </header>
+            <div className="file-search">
+              <Search size={17} />
+              <input
+                value={fileDialog.query}
+                onChange={(event) => refreshDriveFiles(event.target.value)}
+                placeholder="Search txt files"
+                aria-label="Search Drive text files"
+              />
+            </div>
+            <div className="file-list">
+              {fileDialog.loading && <p>Loading...</p>}
+              {!fileDialog.loading && fileDialog.files.length === 0 && <p>No txt files found</p>}
+              {fileDialog.files.map((file) => (
+                <button key={file.id} className="file-row" onClick={() => selectDriveFile(file)}>
+                  <FileText size={17} />
+                  <span>
+                    <strong>{file.name}</strong>
+                    <small>
+                      {file.owners?.[0]?.emailAddress || file.owners?.[0]?.displayName || "Shared file"}
+                    </small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
