@@ -306,7 +306,13 @@ function App() {
   function acceptProposal(comment) {
     const nextLines = [...lines];
     nextLines[comment.lineNumber - 1] = comment.proposal;
-    setBookText(nextLines.join("\n"));
+    const newText = nextLines.join("\n");
+
+    setBookText(newText);
+
+    if (editorRef.current) {
+      editorRef.current.innerText = newText;
+    }
     setComments((existing) =>
       existing.map((item) =>
         item.id === comment.id
@@ -503,10 +509,11 @@ function App() {
             contentEditable
             suppressContentEditableWarning
             style={{ fontFamily, fontSize }}
-            onInput={(event) => setBookText(event.currentTarget.innerText)}
+            onBlur={() => {
+              setBookText(editorRef.current.innerText);
+            }}
             onClick={updateLineSelection}
             onKeyUp={updateLineSelection}
-            dangerouslySetInnerHTML={{ __html: bookText }}
           />
         </section>
 
