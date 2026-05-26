@@ -139,6 +139,12 @@ function App() {
     localStorage.setItem("book-editor-secondary-color", secondaryColor);
   }, [secondaryColor]);
 
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerText = initialLines;
+    }
+  }, []);
+
   async function connectDrive() {
     try {
       setDriveStatus("Choose your Google Drive account...");
@@ -500,9 +506,8 @@ function App() {
             onInput={(event) => setBookText(event.currentTarget.innerText)}
             onClick={updateLineSelection}
             onKeyUp={updateLineSelection}
-          >
-            {bookText}
-          </div>
+            dangerouslySetInnerHTML={{ __html: bookText }}
+          />
         </section>
 
         <footer className="book-footer">
