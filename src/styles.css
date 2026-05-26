@@ -384,6 +384,93 @@ textarea {
   min-width: 48px;
 }
 
+.modal-backdrop {
+  align-items: center;
+  background: rgba(18, 24, 24, 0.46);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 20;
+}
+
+.file-dialog {
+  background: #fbfaf6;
+  border: 1px solid #cbd8d4;
+  border-radius: 8px;
+  box-shadow: 0 22px 70px rgba(30, 43, 39, 0.22);
+  display: grid;
+  gap: 12px;
+  max-height: min(680px, 86vh);
+  max-width: 620px;
+  padding: 14px;
+  width: min(620px, 100%);
+}
+
+.file-dialog-header,
+.file-search,
+.file-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.file-dialog-header {
+  justify-content: space-between;
+}
+
+.file-search {
+  background: #ffffff;
+  border: 1px solid #c9d2cf;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.file-search input {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  min-height: 30px;
+  outline: 0;
+  width: 100%;
+}
+
+.file-list {
+  display: grid;
+  gap: 8px;
+  overflow: auto;
+}
+
+.file-list p {
+  color: #50615c;
+  margin: 8px 0;
+}
+
+.file-row {
+  justify-content: flex-start;
+  min-height: 54px;
+  text-align: left;
+  width: 100%;
+}
+
+.file-row span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.file-row strong,
+.file-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-row small {
+  color: #50615c;
+}
+
 iframe {
   background: #ffffff;
   border: 1px solid #cbd8d4;
@@ -426,10 +513,12 @@ iframe {
 .dark-theme .line-picker input,
 .dark-theme .metadata-row input,
 .dark-theme .search-bar input,
+.dark-theme .file-search,
 .dark-theme select,
 .dark-theme textarea,
 .dark-theme .search-bar,
 .dark-theme .comment-card,
+.dark-theme .file-dialog,
 .dark-theme .settings-popover {
   background: #20282a;
   border-color: #3b4849;
@@ -446,6 +535,11 @@ iframe {
 }
 
 .dark-theme .settings-field span {
+  color: #b8c4c0;
+}
+
+.dark-theme .file-list p,
+.dark-theme .file-row small {
   color: #b8c4c0;
 }
 
